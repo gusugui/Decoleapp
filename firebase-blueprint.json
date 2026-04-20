@@ -1,0 +1,93 @@
+{
+  "entities": {
+    "Question": {
+      "title": "Question",
+      "description": "Represents a multiple-choice question for the pilot exam.",
+      "type": "object",
+      "properties": {
+        "subject": { "type": "string", "description": "Subject category (e.g., Meteorologia)" },
+        "topic": { "type": "string", "description": "Specific topic within the subject" },
+        "statement": { "type": "string", "description": "The question text" },
+        "options": {
+          "type": "object",
+          "properties": {
+            "a": { "type": "string" },
+            "b": { "type": "string" },
+            "c": { "type": "string" },
+            "d": { "type": "string" }
+          },
+          "required": ["a", "b", "c", "d"]
+        },
+        "correctAnswer": { "type": "string", "enum": ["a", "b", "c", "d"] },
+        "explanation": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+        "isPremium": { "type": "boolean" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["subject", "statement", "options", "correctAnswer", "isPremium", "isActive"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Extended user information including subscription status.",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "isPremium": { "type": "boolean" },
+        "totalAnswered": { "type": "integer" },
+        "totalCorrect": { "type": "integer" },
+        "statsBySubject": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "isPremium"]
+    },
+    "Simulation": {
+      "title": "Simulation Result",
+      "description": "Record of a completed simulated exam.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "score": { "type": "number" },
+        "correctCount": { "type": "integer" },
+        "totalQuestions": { "type": "integer" },
+        "timeSpentSeconds": { "type": "integer" },
+        "subject": { "type": "string" },
+        "answers": { "type": "array" }
+      },
+      "required": ["userId", "date", "score"]
+    },
+    "WrongQuestion": {
+      "title": "Wrong Question Track",
+      "description": "Tracks questions the user has answered incorrectly for revision.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "questionId": { "type": "string" },
+        "lastAttemptDate": { "type": "string", "format": "date-time" },
+        "errorCount": { "type": "integer" }
+      },
+      "required": ["userId", "questionId"]
+    }
+  },
+  "firestore": {
+    "/questions/{questionId}": {
+      "schema": "Question",
+      "description": "Bank of all exam questions."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User account and progress data."
+    },
+    "/users/{userId}/simulations/{simulationId}": {
+      "schema": "Simulation",
+      "description": "History of simulations performed by the user."
+    },
+    "/users/{userId}/wrong_questions/{questionId}": {
+      "schema": "WrongQuestion",
+      "description": "Collection of questions identifying user weaknesses."
+    }
+  }
+}

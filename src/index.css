@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1E3A8A;
+  --color-secondary: #1e1b4b;
+  --color-accent: #10B981;
+  --color-success: #10B981;
+  --color-danger: #EF4444;
+  --color-bg-base: #F3F4F6;
+  --color-border-base: #E5E7EB;
+  
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Inter", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-base text-slate-800 antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-accent hover:opacity-90 text-white font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 shadow-sm flex items-center justify-center gap-2;
+  }
+  
+  .btn-outline {
+    @apply border border-border-base bg-white text-slate-600 hover:bg-slate-50 font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-sm;
+  }
+
+  .card {
+    @apply bg-white border border-border-base rounded-xl shadow-[0_1px_3px_0_rgba(0,0,0,0.1),0_1px_2px_0_rgba(0,0,0,0.06)];
+  }
+
+  .nav-item-active {
+    @apply bg-blue-50 text-primary font-semibold;
+  }
+}
+

@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'gustavo.sugui@orbitronic.com.br'
+      ); 
+    }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Validation Blueprints
+    function isValidQuestion(data) {
+      return data.subject is string && data.subject.size() <= 200 &&
+             data.statement is string && data.statement.size() <= 5000 &&
+             data.options is map && data.options.keys().size() == 4 &&
+             data.correctAnswer in ['a', 'b', 'c', 'd'] &&
+             data.isPremium is bool &&
+             data.isActive is bool &&
+             data.difficulty in ['easy', 'medium', 'hard'] &&
+             (!data.hasAll(['explanation']) || data.explanation is string) &&
+             data.keys().hasAll(['subject', 'statement', 'options', 'correctAnswer', 'isPremium', 'isActive', 'difficulty', 'createdAt']);
+    }
+
+    function isValidUserProfile(data) {
+      return data.email is string && data.email.size() <= 255 &&
+             data.isPremium is bool &&
+             (data.get('displayName', '') == null || data.get('displayName', '') is string) &&
+             data.totalAnswered is int &&
+             data.totalCorrect is int &&
+             data.statsBySubject is map &&
+             data.createdAt is string &&
+             data.keys().hasAll(['email', 'isPremium', 'totalAnswered', 'totalCorrect', 'statsBySubject', 'createdAt']);
+    }
+
+    function isValidSimulation(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.date is string &&
+             data.score is number && data.score >= 0 && data.score <= 100 &&
+             data.correctCount is int &&
+             data.totalQuestions is int &&
+             data.timeSpentSeconds is int &&
+             data.subject is string &&
+             data.answers is list && data.answers.size() <= 100 &&
+             data.keys().hasAll(['userId', 'date', 'score', 'correctCount', 'totalQuestions', 'timeSpentSeconds', 'subject', 'answers']);
+    }
+
+    function isValidWrongQuestion(data) {
+      return data.userId is string &&
+             data.questionId is string &&
+             data.lastAttemptDate is string &&
+             data.errorCount is int &&
+             data.keys().hasAll(['userId', 'questionId', 'lastAttemptDate', 'errorCount']);
+    }
+
+    // 1. Questions Collection
+    match /questions/{questionId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isValidQuestion(incoming()) && isValidId(questionId);
+      allow update: if isAdmin() && isValidQuestion(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // 2. Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUserProfile(incoming());
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUserProfile(incoming()) && (
+        isAdmin() || isOwner(userId) // Temporarily allow owner to update their own profile including isPremium for demo
+      );
+    }
+
+    // 3. User Simulations
+    match /users/{userId}/simulations/{simulationId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && incoming().userId == userId && isValidSimulation(incoming());
+      allow update: if false; // Immutable history
+      allow delete: if isAdmin();
+    }
+
+    // 4. Wrong Questions Track
+    match /users/{userId}/wrong_questions/{questionId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && incoming().userId == userId && isValidWrongQuestion(incoming());
+      allow update: if isOwner(userId) && incoming().userId == userId && isValidWrongQuestion(incoming()) && (
+        incoming().userId == existing().userId &&
+        incoming().questionId == existing().questionId
+      );
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Support collections
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+  }
+}
